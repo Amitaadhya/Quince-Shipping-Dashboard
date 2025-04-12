@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quince Shipping Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #1B2559;
+            --accent-teal: #14B8A6;
+            --noida-purple: #8B5CF6;
+            --gurugram-orange: #F59E0B;
+            --dark-bg: #111827;
+            --light-bg: #F3F4F6;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #1F2937;
+            --text-muted: #6B7280;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(180deg, var(--light-bg) 0%, #E5E7EB 100%);
+            color: var(--text-primary);
+            margin: 0;
+            padding-bottom: 80px;
+        }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #3B82F6 100%);
+            color: white;
+            padding: 1.5rem 0;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .dashboard-header h2 {
+            font-weight: 700;
+            font-size: 2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .dashboard-header p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background: transparent;
+            border-bottom: none;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--primary-blue);
+        }
+
+        .unit-badge {
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-noida {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--noida-purple);
+        }
+
+        .badge-gurugram {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--gurugram-orange);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .data-table th {
+            background: var(--primary-blue);
+            color: white;
+            padding: 12px;
+            position: sticky;
+            top: 0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 12px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #E5E7EB;
+            vertical-align: middle;
+        }
+
+        .data-table tr:nth-child(even) {
+            background: rgba(243, 244, 246, 0.5);
+        }
+
+        .data-table tr:hover {
+            background: rgba(20, 184, 166, 0.1);
+        }
+
+        .form-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-btn {
+            background: #E5E7EB;
+            border: none;
+            padding: 8px 16px;
+            margin-right: 8px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--accent-teal);
+            color: white;
+        }
+
+        .tab-btn:hover {
+            background: #D1D5DB;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: #1D4ED8;
+            transform: translateY(-2px);
+        }
+
+        .btn-outline-primary {
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+            border-radius: 8px;
+        }
+
+        .btn-outline-primary:hover {
+            background: rgba(29, 78, 216, 0.1);
+        }
+
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: var(--dark-bg);
+            color: #D1D5DB;
+            text-align: center;
+            padding: 1rem 0;
+            font-size: 0.9rem;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .summary-card h5 {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card h3 {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-blue);
+        }
+
+        @media (max-width: 768px) {
+            .data-table th, .data-table td {
+                font-size: 0.8rem;
+                padding: 8px;
+            }
+
+            .dashboard-header h2 {
+                font-size: 1.5rem;
+            }
+
+            .card {
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2><i class="fas fa-ship me-2"></i> Quince Shipping Dashboard</h2>
+                    <p class="mb-0">Real-time shipping insights & management</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-outline-light btn-sm me-2" id="toggleHelp">
+                        <i class="fas fa-question-circle me-1"></i> Help
+                    </button>
+                    <button class="btn btn-success btn-sm" id="exportExcel">
+                        <i class="fas fa-file-excel me-1"></i> Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-4">
+        <!-- Unit Selector -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="mb-3">Select Unit</h5>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary unit-btn active" data-unit="all">All Units</button>
+                            <button type="button" class="btn btn-outline-primary unit-btn" data-unit="noida"><i class="fas fa-building me-1"></i> Noida</button>
+                            <button type="button" class="btn btn-outline-primary unit-btn" data-unit="gurugram"><i class="fas fa-building me-1"></i> Gurugram</button>
+                            <button type="button" class="btn btn-primary ms-3" id="addNewBtn"><i class="fas fa-plus me-1"></i> Add Entry</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Entry Form -->
+        <div class="row mb-4" id="dataForm" style="display: none;">
+            <div class="col-12">
+                <div class="form-container">
+                    <h4 class="mb-4"><i class="fas fa-edit me-2"></i> Shipping Entry</h4>
+                    <form id="shippingForm">
+                        <input type="hidden" id="editIndex">
+                        <div class="row g-3">
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">Unit</label>
+                                <select class="form-select" id="unit" required>
+                                    <option value="">Select Unit</option>
+                                    <option value="noida">Noida</option>
+                                    <option value="gurugram">Gurugram</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">Booking Number</label>
+                                <input type="text" class="form-control" id="bookingNo" required>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="status" required>
+                                    <option value="pending">Pending</option>
+                                    <option value="shipped">Shipped</option>
+                                    <option value="delivered">Delivered</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">TAX INV NO.</label>
+                                <input type="text" class="form-control" id="taxInvNo" required>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">TAX INV Date</label>
+                                <input type="date" class="form-control" id="taxInvDate" required>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">COMM INV NO</label>
+                                <input type="text" class="form-control" id="commInvNo" required>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">PO Number</label>
+                                <input type="text" class="form-control" id="poNo" required>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="qty" required>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">INV Value ($)</label>
+                                <input type="number" step="0.01" class="form-control" id="invValue" required>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">Cartons Count</label>
+                                <input type="number" class="form-control" id="cartons" required>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">Gross Weight</label>
+                                <input type="number" step="0.01" class="form-control" id="grossWeight" required>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">Net Weight</label>
+                                <input type="number" step="0.01" class="form-control" id="netWeight">
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">Mode</label>
+                                <select class="form-select" id="mode" required>
+                                    <option value="AIR">AIR</option>
+                                    <option value="SEA">SEA</option>
+                                    <option value="LAND">LAND</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <label class="form-label">Forwarder</label>
+                                <input type="text" class="form-control" id="forwarder" required>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="button" class="btn btn-outline-secondary me-2" id="cancelForm">Cancel</button>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Bookings</h5>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="mb-0" id="totalBookings">0</h3>
+                            <i class="fas fa-clipboard-list fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Quantity</h5>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="mb-0" id="totalQuantity">0</h3>
+                            <i class="fas fa-boxes fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Value</h5>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="mb-0" id="totalValue">$0</h3>
+                            <i class="fas fa-dollar-sign fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Weight</h5>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="mb-0" id="totalWeight">0 kg</h3>
+                            <i class="fas fa-weight fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Shipping Analytics</h5>
+                        <div class="btn-group">
+                            <button class="tab-btn active" data-tab="combined">Combined</button>
+                            <button class="tab-btn" data-tab="quantity">Quantity</button>
+                            <button class="tab-btn" data-tab="value">Value</button>
+                            <button class="tab-btn" data-tab="noida">Noida</button>
+                            <button class="tab-btn" data-tab="gurugram">Gurugram</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="mainChart" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Shipping Transactions</h5>
+                        <div class="input-group" style="width: 250px;">
+                            <input type="text" class="form-control" placeholder="Search..." id="searchInput">
+                            <button class="btn btn-outline-secondary" type="button"><i class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 8%;">Unit</th>
+                                        <th style="width: 10%;">Booking No</th>
+                                        <th style="width: 8%;">Status</th>
+                                        <th style="width: 10%;">TAX INV NO.</th>
+                                        <th style="width: 10%;">TAX INV DATE</th>
+                                        <th style="width: 10%;">COMM INV NO</th>
+                                        <th style="width: 8%;">PO NO</th>
+                                        <th style="width: 6%;">QTY</th>
+                                        <th style="width: 8%;">INV VALUE</th>
+                                        <th style="width: 6%;">CARTONS</th>
+                                        <th style="width: 8%;">GROSS WT</th>
+                                        <th style="width: 8%;">NET WT</th>
+                                        <th style="width: 6%;">MODE</th>
+                                        <th style="width: 10%;">FORWARDER</th>
+                                        <th style="width: 8%;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="shipmentData"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" style="background: var(--card-bg); backdrop-filter: blur(10px);">
+                <div class="modal-header">
+                    <h5 class="modal-title">Dashboard Guide</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>How to use:</h6>
+                    <ul>
+                        <li><strong>Add Entry</strong>: Click "Add Entry" to input new data</li>
+                        <li><strong>Filter</strong>: Use unit buttons to filter data</li>
+                        <li><strong>Search</strong>: Type to find specific transactions</li>
+                        <li><strong>Export</strong>: Download data as Excel</li>
+                    </ul>
+                    <h6>Features:</h6>
+                    <ul>
+                        <li>Real-time analytics for PO, Value, Quantity</li>
+                        <li>Track shipments by Noida/Gurugram units</li>
+                        <li>Manage all shipping documents</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p class="mb-0">© 2025 Quince Shipping Dashboard | Crafted by Amit Chaudhary</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script>
+        let shipmentData = JSON.parse(localStorage.getItem('shipmentData')) || [
+            {
+                unit: 'noida',
+                bookingNo: 'BKG-001',
+                status: 'shipped',
+                taxInvNo: '2669E062425',
+                taxInvDate: '2025-03-03',
+                commInvNo: '15450LBI2425',
+                poNo: '16288',
+                qty: 5917,
+                invValue: 96521.75,
+                cartons: 168,
+                grossWeight: 1731.25,
+                netWeight: 1479.25,
+                mode: 'AIR',
+                forwarder: 'SKYBRIDGE FREIGHT INDIA PRIVATE LIMITED'
+            },
+            {
+                unit: 'gurugram',
+                bookingNo: 'BKG-002',
+                status: 'pending',
+                taxInvNo: '2670E062425',
+                taxInvDate: '2025-03-03',
+                commInvNo: '15458LBI2425',
+                poNo: '14516',
+                qty: 500,
+                invValue: 11750.00,
+                cartons: 13,
+                grossWeight: 79.5,
+                netWeight: 67,
+                mode: 'AIR',
+                forwarder: 'SKYBRIDGE FREIGHT INDIA PRIVATE LIMITED'
+            }
+        ];
+
+        let currentUnit = 'all';
+        let mainChart;
+
+        function formatCurrency(amount) {
+            return '$' + amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatNumber(num) {
+            return num.toLocaleString('en-IN');
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('shipmentData', JSON.stringify(shipmentData));
+        }
+
+        function calculateTotals() {
+            const filteredData = filterDataByUnit();
+            const totalBookings = filteredData.length;
+            const totalQuantity = filteredData.reduce((sum, item) => sum + item.qty, 0);
+            const totalValue = filteredData.reduce((sum, item) => sum + item.invValue, 0);
+            const totalWeight = filteredData.reduce((sum, item) => sum + (item.grossWeight || 0), 0);
+
+            document.getElementById('totalBookings').textContent = formatNumber(totalBookings);
+            document.getElementById('totalQuantity').textContent = formatNumber(totalQuantity);
+            document.getElementById('totalValue').textContent = formatCurrency(totalValue);
+            document.getElementById('totalWeight').textContent = formatNumber(totalWeight) + ' kg';
+        }
+
+        function filterDataByUnit() {
+            if (currentUnit === 'all') return shipmentData;
+            return shipmentData.filter(item => item.unit === currentUnit);
+        }
+
+        function renderTable() {
+            const tableBody = document.getElementById('shipmentData');
+            tableBody.innerHTML = '';
+
+            const filteredData = filterDataByUnit();
+
+            filteredData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="unit-badge badge-${item.unit}">${item.unit === 'noida' ? 'Noida' : 'Gurugram'}</span></td>
+                    <td>${item.bookingNo}</td>
+                    <td><span class="badge ${getStatusBadgeClass(item.status)}">${item.status.toUpperCase()}</span></td>
+                    <td>${item.taxInvNo}</td>
+                    <td>${formatDate(item.taxInvDate)}</td>
+                    <td>${item.commInvNo}</td>
+                    <td>${item.poNo}</td>
+                    <td>${formatNumber(item.qty)}</td>
+                    <td>${formatCurrency(item.invValue)}</td>
+                    <td>${item.cartons}</td>
+                    <td>${item.grossWeight}</td>
+                    <td>${item.netWeight || '-'}</td>
+                    <td>${item.mode}</td>
+                    <td>${item.forwarder}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1 edit-btn" data-index="${index}"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${index}"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => editData(e.currentTarget.dataset.index));
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => deleteData(e.currentTarget.dataset.index));
+            });
+        }
+
+        function getStatusBadgeClass(status) {
+            switch(status) {
+                case 'shipped': return 'bg-success';
+                case 'pending': return 'bg-warning text-dark';
+                case 'delivered': return 'bg-primary';
+                default: return 'bg-secondary';
+            }
+        }
+
+        function initMainChart(type = 'combined') {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const filteredData = filterDataByUnit();
+            
+            if (mainChart) mainChart.destroy();
+
+            let config = {};
+
+            if (type === 'combined') {
+                config = {
+                    type: 'bar',
+                    data: {
+                        labels: filteredData.map(item => item.poNo),
+                        datasets: [
+                            {
+                                label: 'Value ($)',
+                                data: filteredData.map(item => item.invValue),
+                                backgroundColor: 'rgba(27, 37, 89, 0.7)',
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Quantity',
+                                data: filteredData.map(item => item.qty),
+                                backgroundColor: 'rgba(20, 184, 166, 0.7)',
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: true, position: 'left', ticks: { callback: value => formatCurrency(value) } },
+                            y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } }
+                        }
+                    }
+                };
+            } else if (type === 'quantity') {
+                const noidaData = shipmentData.filter(item => item.unit === 'noida');
+                const gurugramData = shipmentData.filter(item => item.unit === 'gurugram');
+                config = {
+                    type: 'bar',
+                    data: {
+                        labels: ['Noida', 'Gurugram'],
+                        datasets: [{
+                            label: 'Total Quantity',
+                            data: [
+                                noidaData.reduce((sum, item) => sum + item.qty, 0),
+                                gurugramData.reduce((sum, item) => sum + item.qty, 0)
+                            ],
+                            backgroundColor: ['rgba(139, 92, 246, 0.7)', 'rgba(245, 158, 11, 0.7)']
+                        }]
+                    }
+                };
+            } else if (type === 'value') {
+                config = {
+                    type: 'line',
+                    data: {
+                        labels: filteredData.map(item => item.taxInvDate),
+                        datasets: [{
+                            label: 'Invoice Value ($)',
+                            data: filteredData.map(item => item.invValue),
+                            borderColor: 'rgba(27, 37, 89, 1)',
+                            backgroundColor: 'rgba(27, 37, 89, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        scales: { y: { beginAtZero: true, ticks: { callback: value => formatCurrency(value) } } }
+                    }
+                };
+            } else if (type === 'noida' || type === 'gurugram') {
+                const unitData = shipmentData.filter(item => item.unit === type);
+                config = {
+                    type: 'bar',
+                    data: {
+                        labels: unitData.map(item => item.poNo),
+                        datasets: [
+                            {
+                                label: 'Value ($)',
+                                data: unitData.map(item => item.invValue),
+                                backgroundColor: type === 'noida' ? 'rgba(139, 92, 246, 0.7)' : 'rgba(245, 158, 11, 0.7)',
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Quantity',
+                                data: unitData.map(item => item.qty),
+                                backgroundColor: type === 'noida' ? 'rgba(139, 92, 246, 0.4)' : 'rgba(245, 158, 11, 0.4)',
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: true, position: 'left', ticks: { callback: value => formatCurrency(value) } },
+                            y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } }
+                        }
+                    }
+                };
+            }
+
+            mainChart = new Chart(ctx, {
+                ...config,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { size: 12, family: 'Poppins' } } },
+                        tooltip: {
+                            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                            bodyFont: { family: 'Poppins' },
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    label += context.dataset.label.includes('$') ? formatCurrency(context.raw) : formatNumber(context.raw);
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    ...config.options,
+                    animation: { duration: 1200, easing: 'easeInOutQuart' }
+                }
+            });
+        }
+
+        function exportToExcel() {
+            const filteredData = filterDataByUnit();
+            const ws = XLSX.utils.json_to_sheet(filteredData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Shipping Data");
+            XLSX.writeFile(wb, `Quince_Shipping_Data_${currentUnit}.xlsx`);
+        }
+
+        function addNewData() {
+            document.getElementById('shippingForm').reset();
+            document.getElementById('editIndex').value = '';
+            document.getElementById('dataForm').style.display = 'block';
+        }
+
+        function editData(index) {
+            const item = shipmentData[index];
+            document.getElementById('unit').value = item.unit;
+            document.getElementById('bookingNo').value = item.bookingNo;
+            document.getElementById('status').value = item.status;
+            document.getElementById('taxInvNo').value = item.taxInvNo;
+            document.getElementById('taxInvDate').value = item.taxInvDate;
+            document.getElementById('commInvNo').value = item.commInvNo;
+            document.getElementById('poNo').value = item.poNo;
+            document.getElementById('qty').value = item.qty;
+            document.getElementById('invValue').value = item.invValue;
+            document.getElementById('cartons').value = item.cartons;
+            document.getElementById('grossWeight').value = item.grossWeight;
+            document.getElementById('netWeight').value = item.netWeight || '';
+            document.getElementById('mode').value = item.mode;
+            document.getElementById('forwarder').value = item.forwarder;
+            document.getElementById('editIndex').value = index;
+            document.getElementById('dataForm').style.display = 'block';
+        }
+
+        function deleteData(index) {
+            if (confirm('Are you sure you want to delete this entry?')) {
+                shipmentData.splice(index, 1);
+                saveToLocalStorage();
+                refreshDashboard();
+            }
+        }
+
+        function saveFormData(e) {
+            e.preventDefault();
+            const formData = {
+                unit: document.getElementById('unit').value,
+                bookingNo: document.getElementById('bookingNo').value,
+                status: document.getElementById('status').value,
+                taxInvNo: document.getElementById('taxInvNo').value,
+                taxInvDate: document.getElementById('taxInvDate').value,
+                commInvNo: document.getElementById('commInvNo').value,
+                poNo: document.getElementById('poNo').value,
+                qty: parseInt(document.getElementById('qty').value),
+                invValue: parseFloat(document.getElementById('invValue').value),
+                cartons: parseInt(document.getElementById('cartons').value),
+                grossWeight: parseFloat(document.getElementById('grossWeight').value),
+                netWeight: document.getElementById('netWeight').value ? parseFloat(document.getElementById('netWeight').value) : null,
+                mode: document.getElementById('mode').value,
+                forwarder: document.getElementById('forwarder').value
+            };
+
+            const editIndex = document.getElementById('editIndex').value;
+            if (editIndex !== '') {
+                shipmentData[editIndex] = formData;
+            } else {
+                shipmentData.push(formData);
+            }
+
+            shipmentData.sort((a, b) => a.bookingNo.localeCompare(b.bookingNo));
+            saveToLocalStorage();
+            refreshDashboard();
+            document.getElementById('dataForm').style.display = 'none';
+        }
+
+        function refreshDashboard() {
+            calculateTotals();
+            renderTable();
+            initMainChart(document.querySelector('.tab-btn.active').dataset.tab);
+        }
+
+        function initDashboard() {
+            refreshDashboard();
+
+            document.querySelectorAll('.unit-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentUnit = this.dataset.unit;
+                    refreshDashboard();
+                });
+            });
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    initMainChart(this.dataset.tab);
+                });
+            });
+
+            document.getElementById('addNewBtn').addEventListener('click', addNewData);
+            document.getElementById('cancelForm').addEventListener('click', () => {
+                document.getElementById('dataForm').style.display = 'none';
+            });
+            document.getElementById('shippingForm').addEventListener('submit', saveFormData);
+            document.getElementById('exportExcel').addEventListener('click', exportToExcel);
+
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const rows = document.querySelectorAll('#shipmentData tr');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            });
+
+            const helpModal = new bootstrap.Modal(document.getElementById('helpModal'));
+            document.getElementById('toggleHelp').addEventListener('click', () => helpModal.show());
+        }
+
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
